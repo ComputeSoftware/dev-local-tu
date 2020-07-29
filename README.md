@@ -38,3 +38,18 @@ A test environment is typically used within a `with-open`.
 ```
 
 If you would prefer to manage the lifecycle, use `new-env` to generate a new, random system and `cleanup-env!` to remove the associated resources.
+
+Alternatively, you can use test-env with fixtures. 
+See `examples/example_fixture.clj` for the complete example.
+
+```clojure
+(def ^:dynamic *client* nil)
+
+(defn client-fixture
+  [f]
+  (with-open [db-env (dev-local-tu/test-env)]
+    (binding [*client* (:client db-env)]
+      (f))))
+
+(use-fixtures :each client-fixture)
+```
