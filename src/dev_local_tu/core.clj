@@ -28,8 +28,8 @@
   (let [system (or system (gen-name! prefix))
         storage-dir (if (or
                           (= storage-dir :mem)
-                          storage-dir
-                          (str/starts-with? storage-dir "/"))
+                          (and storage-dir
+                            (str/starts-with? storage-dir "/")))
                       storage-dir
                       (.getAbsolutePath
                         (dev-local-directory
