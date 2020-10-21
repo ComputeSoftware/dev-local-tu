@@ -1,5 +1,6 @@
 (ns dev-local-tu.core
   (:require
+    [clojure.string :as str]
     [datomic.client.api :as d]
     [datomic.dev-local]
     [clojure.java.io :as io]
@@ -14,36 +15,41 @@
   (.getAbsolutePath (io/file (System/getProperty "user.home") ".datomic" "data")))
 
 (defn dev-local-directory
-  [{::keys [system-name db-name storage-dir]
-    :or    {storage-dir default-datomic-dev-local-storage-dir}}]
-  (let [file-args (cond-> [storage-dir system-name]
-                          db-name (conj db-name))]
+  [{:keys [system-name db-name storage-dir]
+    :or   {storage-dir default-datomic-dev-local-storage-dir}}]
+  (let [file-args (cond-> [storage-dir]
+                    system-name (conj system-name)
+                    db-name (conj db-name))]
     (apply io/file file-args)))
 
-(defn new-env
-  [{::keys [prefix system storage-dir]
-    :or    {prefix "dev-local"}}]
+(defn -new-env-map
+  [{:keys [prefix system storage-dir]
+    :or   {prefix "dev-local"}}]
   (let [system (or system (gen-name! prefix))
-        storage-dir (.getAbsolutePath
-                      (dev-local-directory
-                        (cond-> {::system-name system}
-                                storage-dir
-                                (assoc ::storage-dir storage-dir))))
+        storage-dir (if (or
+                          (= storage-dir :mem)
+                          (str/starts-with? storage-dir "/"))
+                      storage-dir
+                      (.getAbsolutePath
+                        (dev-local-directory
+                          (cond-> {}
+                            storage-dir
+                            (assoc ::storage-dir storage-dir)))))
         client-map {:server-type :dev-local
                     :system      system
                     :storage-dir storage-dir}]
-    {::client      (d/client client-map)
-     ::client-map  client-map
-     ::system      system
-     ::storage-dir storage-dir}))
+    {:client      (d/client client-map)
+     :client-map  client-map
+     :system      system
+     :storage-dir storage-dir}))
 
 (defn delete-dev-local-system!
   "Deletes a :dev-local system's data. Always returns true. Throws on failure."
   ([system-name]
    (delete-dev-local-system! system-name default-datomic-dev-local-storage-dir))
   ([system-name storage-dir]
-   (let [f (dev-local-directory {::system-name system-name
-                                 ::storage-dir storage-dir})]
+   (let [f (dev-local-directory {:system-name system-name
+                                 :storage-dir storage-dir})]
      (if (.exists ^File f)
        (do
          (impl/delete-directory! f)
@@ -51,7 +57,7 @@
        true))))
 
 (comment
-  (new-env {})
+  (-new-env-map {})
   )
 
 (defn release-dbs
@@ -64,24 +70,23 @@
 
 (defn cleanup-env!
   "Releases resources used by client and deletes the data directory for the system."
-  [{::keys [client system]}]
+  [{:keys [client system client-map]}]
   (release-dbs client system)
-  (delete-dev-local-system! system))
+  (when (string? (:storage-dir client-map))
+    (delete-dev-local-system! system)))
 
 (defrecord TestEnv [system client]
   Closeable
-  (close [_]
-    (cleanup-env!
-      {::client client
-       ::system system})))
+  (close [env]
+    (cleanup-env! env)))
 
 (defn test-env
   "Returns a Closable test environment. Optionally takes a map with the following
    keys.
-      ::prefix - The prefix for the generated system name.
-      ::system - Force a specific system name. Will override prefix.
-      ::storage-dir - The storage directory for data passed to the d/client.
-        Defaults to ~/.datomic/data.
+      :prefix - The prefix for the generated system name.
+      :system - Force a specific system name. Will override prefix.
+      :storage-dir - The storage directory for data passed to the d/client.
+        Defaults to ~/.datomic/data. Pass :mem to use a memory only database.
 
    The returned test environment has the following keys.
       :client - The generated Datomic client.
@@ -93,14 +98,16 @@
    and delete the data directory."
   ([] (test-env {}))
   ([env-argm]
-   (let [{::keys [client client-map system]} (new-env env-argm)]
-     (map->TestEnv
-       {:system     system
-        :client-map client-map
-        :client     client}))))
+   (let [env (-new-env-map env-argm)]
+     (map->TestEnv env))))
 
 (comment
-  (def e (test-env))
+  (def e (test-env {:system "test"}))
   (.close e)
   (d/create-database (:client e) {:db-name "test"})
+  (d/list-databases (:client e) {})
+  (def conn (d/connect (:client e) {:db-name "test"}))
+  (d/transact conn {:tx-data [{:db/ident       ::foo
+                               :db/valueType   :db.type/string
+                               :db/cardinality :db.cardinality/one}]})
   )
