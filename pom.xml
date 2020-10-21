@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev-local-tu</groupId>
   <artifactId>dev-local-tu</artifactId>
-  <version>0.2.1</version>
+  <version>0.2.2</version>
   <name>dev-local-tu</name>
   <dependencies>
     <dependency>
