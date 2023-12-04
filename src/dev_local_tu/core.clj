@@ -51,11 +51,9 @@
   ([system-name storage-dir]
    (let [f (dev-local-directory {:system-name system-name
                                  :storage-dir storage-dir})]
-     (if (.exists ^File f)
-       (do
-         (impl/delete-directory! f)
-         true)
-       true))))
+     (when (.exists ^File f)
+       (impl/delete-directory! f))
+     true)))
 
 (comment
   (-new-env-map {})
