@@ -2,7 +2,7 @@
   (:require
     [clojure.string :as str]
     [datomic.client.api :as d]
-    [datomic.dev-local]
+    [datomic.local]
     [clojure.java.io :as io]
     [dev-local-tu.internal.impl :as impl])
   (:import (java.io Closeable File)))
@@ -36,7 +36,7 @@
                           (cond-> {}
                             storage-dir
                             (assoc ::storage-dir storage-dir)))))
-        client-map {:server-type :dev-local
+        client-map {:server-type :datomic-local
                     :system      system
                     :storage-dir storage-dir}]
     {:client      (d/client client-map)
@@ -65,8 +65,8 @@
   "Releases all DBs."
   [client system]
   (doseq [db-name (d/list-databases client {})]
-    ;; https://docs.datomic.com/cloud/dev-local.html#release-db
-    (datomic.dev-local/release-db
+    ;; https://docs.datomic.com/cloud/datomic-local.html#release-db
+    (datomic.local/release-db
       {:system system :db-name db-name})))
 
 (defn cleanup-env!
