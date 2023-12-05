@@ -3,13 +3,13 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev-local-tu</groupId>
   <artifactId>dev-local-tu</artifactId>
-  <version>0.2.2</version>
+  <version>0.3.0</version>
   <name>dev-local-tu</name>
   <dependencies>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.10.1</version>
+      <version>1.11.1</version>
     </dependency>
   </dependencies>
   <build>

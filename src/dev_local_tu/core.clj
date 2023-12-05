@@ -2,7 +2,7 @@
   (:require
     [clojure.string :as str]
     [datomic.client.api :as d]
-    [datomic.dev-local]
+    [datomic.local]
     [clojure.java.io :as io]
     [dev-local-tu.internal.impl :as impl])
   (:import (java.io Closeable File)))
@@ -15,8 +15,8 @@
   (.getAbsolutePath (io/file (System/getProperty "user.home") ".datomic" "data")))
 
 (defn dev-local-directory
-  [{:keys [system-name db-name storage-dir]
-    :or   {storage-dir default-datomic-dev-local-storage-dir}}]
+  ^File [{:keys [system-name db-name storage-dir]
+          :or   {storage-dir default-datomic-dev-local-storage-dir}}]
   (let [file-args (cond-> [storage-dir]
                     system-name (conj system-name)
                     db-name (conj db-name))]
@@ -36,7 +36,7 @@
                           (cond-> {}
                             storage-dir
                             (assoc ::storage-dir storage-dir)))))
-        client-map {:server-type :dev-local
+        client-map {:server-type :datomic-local
                     :system      system
                     :storage-dir storage-dir}]
     {:client      (d/client client-map)
@@ -51,11 +51,9 @@
   ([system-name storage-dir]
    (let [f (dev-local-directory {:system-name system-name
                                  :storage-dir storage-dir})]
-     (if (.exists ^File f)
-       (do
-         (impl/delete-directory! f)
-         true)
-       true))))
+     (when (.exists ^File f)
+       (impl/delete-directory! f))
+     true)))
 
 (comment
   (-new-env-map {})
@@ -65,8 +63,8 @@
   "Releases all DBs."
   [client system]
   (doseq [db-name (d/list-databases client {})]
-    ;; https://docs.datomic.com/cloud/dev-local.html#release-db
-    (datomic.dev-local/release-db
+    ;; https://docs.datomic.com/cloud/datomic-local.html#release-db
+    (datomic.local/release-db
       {:system system :db-name db-name})))
 
 (defn cleanup-env!
