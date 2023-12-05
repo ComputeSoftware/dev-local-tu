@@ -15,8 +15,8 @@
   (.getAbsolutePath (io/file (System/getProperty "user.home") ".datomic" "data")))
 
 (defn dev-local-directory
-  [{:keys [system-name db-name storage-dir]
-    :or   {storage-dir default-datomic-dev-local-storage-dir}}]
+  ^File [{:keys [system-name db-name storage-dir]
+          :or   {storage-dir default-datomic-dev-local-storage-dir}}]
   (let [file-args (cond-> [storage-dir]
                     system-name (conj system-name)
                     db-name (conj db-name))]
